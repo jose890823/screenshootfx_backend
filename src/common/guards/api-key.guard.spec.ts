@@ -1,14 +1,19 @@
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { ApiKeyGuard } from './api-key.guard';
+import { ApiKeysService } from '../../modules/api-keys/api-keys.service';
 
 describe('ApiKeyGuard', () => {
   let guard: ApiKeyGuard;
+  let mockApiKeysService: jest.Mocked<ApiKeysService>;
   let mockExecutionContext: ExecutionContext;
 
-  const originalEnv = process.env.API_KEY;
-
   beforeEach(() => {
-    guard = new ApiKeyGuard();
+    // Mock del ApiKeysService
+    mockApiKeysService = {
+      validateApiKey: jest.fn(),
+    } as any;
+
+    guard = new ApiKeyGuard(mockApiKeysService);
 
     // Mock del ExecutionContext
     mockExecutionContext = {
@@ -20,21 +25,22 @@ describe('ApiKeyGuard', () => {
     } as any;
   });
 
-  afterEach(() => {
-    // Restaurar variable de entorno
-    process.env.API_KEY = originalEnv;
-  });
-
   it('debe estar definido', () => {
     expect(guard).toBeDefined();
   });
 
-  it('debe permitir acceso con API Key válida', () => {
-    process.env.API_KEY = 'test-api-key-123';
+  it('debe permitir acceso con API Key válida', async () => {
+    const mockApiKey = {
+      id: '123',
+      name: 'Test Key',
+      isActive: true,
+    };
+
+    mockApiKeysService.validateApiKey.mockResolvedValue(mockApiKey as any);
 
     const mockRequest = {
       headers: {
-        'x-api-key': 'test-api-key-123',
+        'x-api-key': 'sk_live_valid_key_123',
       },
     };
 
@@ -42,13 +48,14 @@ describe('ApiKeyGuard', () => {
       getRequest: () => mockRequest,
     });
 
-    const result = guard.canActivate(mockExecutionContext);
+    const result = await guard.canActivate(mockExecutionContext);
     expect(result).toBe(true);
+    expect(mockApiKeysService.validateApiKey).toHaveBeenCalledWith(
+      'sk_live_valid_key_123',
+    );
   });
 
-  it('debe rechazar request sin API Key', () => {
-    process.env.API_KEY = 'test-api-key-123';
-
+  it('debe rechazar request sin API Key', async () => {
     const mockRequest = {
       headers: {},
     };
@@ -57,17 +64,17 @@ describe('ApiKeyGuard', () => {
       getRequest: () => mockRequest,
     });
 
-    expect(() => guard.canActivate(mockExecutionContext)).toThrow(
+    await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
       UnauthorizedException,
     );
   });
 
-  it('debe rechazar request con API Key inválida', () => {
-    process.env.API_KEY = 'test-api-key-123';
+  it('debe rechazar request con API Key inválida', async () => {
+    mockApiKeysService.validateApiKey.mockResolvedValue(null);
 
     const mockRequest = {
       headers: {
-        'x-api-key': 'wrong-api-key',
+        'x-api-key': 'sk_live_invalid_key',
       },
     };
 
@@ -75,17 +82,23 @@ describe('ApiKeyGuard', () => {
       getRequest: () => mockRequest,
     });
 
-    expect(() => guard.canActivate(mockExecutionContext)).toThrow(
+    await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
       UnauthorizedException,
     );
   });
 
-  it('debe rechazar si no hay API_KEY configurada en el servidor', () => {
-    delete process.env.API_KEY;
+  it('debe agregar información de la key al request cuando es válida', async () => {
+    const mockApiKey = {
+      id: '123',
+      name: 'Test Key',
+      isActive: true,
+    };
+
+    mockApiKeysService.validateApiKey.mockResolvedValue(mockApiKey as any);
 
     const mockRequest = {
       headers: {
-        'x-api-key': 'any-key',
+        'x-api-key': 'sk_live_valid_key_123',
       },
     };
 
@@ -93,8 +106,7 @@ describe('ApiKeyGuard', () => {
       getRequest: () => mockRequest,
     });
 
-    expect(() => guard.canActivate(mockExecutionContext)).toThrow(
-      UnauthorizedException,
-    );
+    await guard.canActivate(mockExecutionContext);
+    expect(mockRequest['apiKey']).toEqual(mockApiKey);
   });
 });

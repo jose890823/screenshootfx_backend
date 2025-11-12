@@ -23,7 +23,12 @@ async function bootstrap() {
     )
     .setVersion('1.0')
     .addApiKey({ type: 'apiKey', name: 'x-api-key', in: 'header' }, 'api-key')
+    .addApiKey(
+      { type: 'apiKey', name: 'x-master-key', in: 'header' },
+      'master-key',
+    )
     .addTag('screenshots', 'Endpoints de captura de screenshots')
+    .addTag('api-keys', 'Gestión de API Keys (requiere Master Key)')
     .addTag('health', 'Health checks del sistema')
     .build();
 

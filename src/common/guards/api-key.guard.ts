@@ -3,42 +3,43 @@ import {
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
-import { Observable } from 'rxjs';
+import { ApiKeysService } from '../../modules/api-keys/api-keys.service';
 
 /**
  * Guard para validar API Key en los requests
- * Verifica que el header 'x-api-key' coincida con la API_KEY configurada en .env
+ * Valida contra la base de datos de API Keys con bcrypt
+ * ACTUALIZADO: Ahora usa sistema robusto con BD en lugar de .env
  */
 @Injectable()
 export class ApiKeyGuard implements CanActivate {
-  canActivate(
-    context: ExecutionContext,
-  ): boolean | Promise<boolean> | Observable<boolean> {
+  private readonly logger = new Logger(ApiKeyGuard.name);
+
+  constructor(private readonly apiKeysService: ApiKeysService) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const apiKey = request.headers['x-api-key'];
-
-    // Obtener API_KEY del environment
-    const validApiKey = process.env.API_KEY;
-
-    // Si no hay API_KEY configurada, denegar acceso por seguridad
-    if (!validApiKey) {
-      throw new UnauthorizedException(
-        'API Key no configurada en el servidor. Contacte al administrador.',
-      );
-    }
+    const apiKey = request.headers['x-api-key'] as string;
 
     // Validar que el header incluya la API Key
     if (!apiKey) {
+      this.logger.warn('Request sin API Key detectado');
       throw new UnauthorizedException(
         'API Key requerida. Incluya el header x-api-key en su request.',
       );
     }
 
-    // Validar que la API Key sea correcta
-    if (apiKey !== validApiKey) {
-      throw new UnauthorizedException('API Key inválida.');
+    // Validar contra la base de datos
+    const validKey = await this.apiKeysService.validateApiKey(apiKey);
+
+    if (!validKey) {
+      this.logger.warn('Intento de acceso con API Key inválida');
+      throw new UnauthorizedException('API Key inválida o expirada.');
     }
+
+    // Agregar información de la key al request para uso posterior
+    request['apiKey'] = validKey;
 
     return true;
   }
