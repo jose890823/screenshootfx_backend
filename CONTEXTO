@@ -1,0 +1,522 @@
+# PROYECTO: Servicio de Screenshots de TradingView con NestJS
+
+## CONTEXTO DEL PROYECTO
+Soy un Full Stack Developer especializado en JavaScript/TypeScript, Vue.js y NestJS. Necesito construir un servicio backend robusto para capturar screenshots automatizados de gráficos de TradingView para mi sistema de trading algorítmico de XAUUSD.
+
+**Propósito:** Reemplazar servicios de terceros limitados (como Screenshotlayer) con una solución propia que integre con Make.com y Claude AI para análisis técnico multi-timeframe usando Smart Money Concepts.
+
+**Stack Tecnológico Requerido:**
+- Backend: NestJS con TypeScript
+- Navegador Headless: Puppeteer o Playwright
+- Base de Datos: PostgreSQL (opcional para logs/historial)
+- Almacenamiento: Sistema de archivos local + opción S3/Cloudinary
+- Seguridad: API Key authentication
+- Documentación: Swagger/OpenAPI
+
+---
+
+## REQUISITOS FUNCIONALES PRINCIPALES
+
+### 1. ENDPOINT DE CAPTURA INDIVIDUAL
+**POST /api/screenshots/single**
+```typescript
+// Request Body
+{
+  "symbol": "XAUUSD",           // Símbolo del activo
+  "timeframe": "240",           // Timeframe en minutos (240 = 4H, 60 = 1H, 5 = 5M)
+  "width": 1920,                // Ancho opcional (default: 1920)
+  "height": 1080,               // Alto opcional (default: 1080)
+  "theme": "dark",              // Tema: "dark" o "light" (default: dark)
+  "indicators": [               // Indicadores opcionales a aplicar
+    "EMA_20",
+    "EMA_50",
+    "VOLUME"
+  ]
+}
+
+// Response
+{
+  "success": true,
+  "data": {
+    "imageUrl": "https://your-domain.com/screenshots/xauusd_4h_1234567890.png",
+    "base64": "data:image/png;base64,iVBORw0KGgoAAAANSUhE...", // Opcional
+    "metadata": {
+      "symbol": "XAUUSD",
+      "timeframe": "4H",
+      "capturedAt": "2025-11-12T10:30:00Z",
+      "size": "1920x1080",
+      "fileSize": "245KB"
+    }
+  }
+}
+```
+
+---
+
+### 2. ENDPOINT DE CAPTURA MÚLTIPLE (CRÍTICO) 🔥
+**POST /api/screenshots/batch**
+
+Este es el endpoint más importante para mi flujo de trabajo con Make.com y Claude AI.
+```typescript
+// Request Body
+{
+  "symbols": ["XAUUSD", "EURUSD", "GBPUSD"],  // Array de símbolos
+  "timeframes": ["240", "60", "15"],          // Array de timeframes (4H, 1H, 15M)
+  "width": 1920,
+  "height": 1080,
+  "theme": "dark",
+  "includeBase64": false,  // Si true, incluye base64 en response (útil para Claude AI)
+  "format": "png"          // png o jpg
+}
+
+// Response
+{
+  "success": true,
+  "data": {
+    "totalImages": 9,  // 3 símbolos × 3 timeframes = 9 imágenes
+    "screenshots": [
+      {
+        "symbol": "XAUUSD",
+        "timeframe": "4H",
+        "imageUrl": "https://your-domain.com/screenshots/xauusd_4h_1234567890.png",
+        "base64": null,  // O data:image/png;base64,... si includeBase64 es true
+        "metadata": {
+          "capturedAt": "2025-11-12T10:30:00Z",
+          "fileSize": "245KB",
+          "dimensions": "1920x1080"
+        }
+      },
+      {
+        "symbol": "XAUUSD",
+        "timeframe": "1H",
+        "imageUrl": "https://your-domain.com/screenshots/xauusd_1h_1234567891.png",
+        "base64": null,
+        "metadata": { ... }
+      },
+      // ... resto de combinaciones (total 9)
+    ],
+    "summary": {
+      "successful": 9,
+      "failed": 0,
+      "totalTime": "12.5s"
+    }
+  }
+}
+```
+
+**IMPORTANTE:** Este endpoint debe procesar las capturas en paralelo cuando sea posible para optimizar tiempo, pero con límite de concurrencia (max 3-5 tabs simultáneas) para no sobrecargar recursos.
+
+---
+
+### 3. ENDPOINTS ADICIONALES
+
+#### GET /api/screenshots/history
+Lista de capturas históricas (últimas 100)
+
+#### GET /api/screenshots/:id
+Recuperar una captura específica por ID
+
+#### DELETE /api/screenshots/:id
+Eliminar captura (si se implementa almacenamiento)
+
+#### GET /api/health
+Health check del servicio
+
+---
+
+## ARQUITECTURA TÉCNICA DETALLADA
+
+### Estructura de Directorios NestJS
+```
+src/
+├── main.ts
+├── app.module.ts
+├── config/
+│   ├── app.config.ts
+│   └── puppeteer.config.ts
+├── modules/
+│   └── screenshots/
+│       ├── screenshots.module.ts
+│       ├── screenshots.controller.ts
+│       ├── screenshots.service.ts
+│       ├── dto/
+│       │   ├── single-screenshot.dto.ts
+│       │   ├── batch-screenshot.dto.ts
+│       │   └── screenshot-response.dto.ts
+│       ├── entities/
+│       │   └── screenshot.entity.ts
+│       └── interfaces/
+│           └── screenshot-options.interface.ts
+├── common/
+│   ├── guards/
+│   │   └── api-key.guard.ts
+│   ├── interceptors/
+│   │   └── logging.interceptor.ts
+│   ├── filters/
+│   │   └── http-exception.filter.ts
+│   └── utils/
+│       ├── tradingview.helper.ts
+│       └── file.helper.ts
+└── storage/
+    └── screenshots/  // Almacenamiento local de imágenes
+```
+
+---
+
+## IMPLEMENTACIÓN DE PUPPETEER/PLAYWRIGHT
+
+### Configuración de Navegador Headless
+
+**Requisitos específicos para TradingView:**
+1. Esperar a que el gráfico esté completamente cargado (eventos específicos de TradingView)
+2. Remover elementos innecesarios de la UI (toolbar superior, sidebar, etc.)
+3. Maximizar área del gráfico
+4. Asegurar que las velas/candlesticks estén visibles
+5. Manejar cookies/popups automáticamente
+
+**URL Base de TradingView:**
+```
+https://www.tradingview.com/chart/?symbol={exchange}:{symbol}&interval={timeframe}
+```
+
+Ejemplo: `https://www.tradingview.com/chart/?symbol=OANDA:XAUUSD&interval=240`
+
+**Mapeo de Timeframes:**
+```typescript
+const timeframeMap = {
+  '1': '1',      // 1 minuto
+  '5': '5',      // 5 minutos
+  '15': '15',    // 15 minutos
+  '60': '60',    // 1 hora
+  '240': '240',  // 4 horas
+  '1D': '1D',    // 1 día
+};
+```
+
+### Script de Captura (Pseudocódigo)
+```typescript
+async captureChart(symbol: string, timeframe: string, options: ScreenshotOptions) {
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+    ]
+  });
+
+  const page = await browser.newPage();
+  
+  // Configurar viewport
+  await page.setViewport({
+    width: options.width || 1920,
+    height: options.height || 1080,
+  });
+
+  // Construir URL de TradingView
+  const url = this.buildTradingViewUrl(symbol, timeframe);
+  
+  // Navegar a TradingView
+  await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+
+  // Esperar a que el gráfico cargue completamente
+  await page.waitForSelector('.chart-container', { timeout: 15000 });
+  
+  // Ejecutar JavaScript para limpiar UI (opcional)
+  await page.evaluate(() => {
+    // Remover elementos innecesarios
+    document.querySelector('.header-toolbar')?.remove();
+    document.querySelector('.left-toolbar')?.remove();
+    // etc.
+  });
+
+  // Esperar un poco más para asegurar render completo
+  await page.waitForTimeout(2000);
+
+  // Capturar screenshot
+  const screenshot = await page.screenshot({
+    type: options.format || 'png',
+    fullPage: false,
+  });
+
+  await browser.close();
+
+  return screenshot;
+}
+```
+
+---
+
+## SEGURIDAD Y AUTENTICACIÓN
+
+### API Key Guard
+```typescript
+// Implementar guard de API Key
+@Injectable()
+export class ApiKeyGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest();
+    const apiKey = request.headers['x-api-key'];
+    return apiKey === process.env.API_KEY;
+  }
+}
+```
+
+### Variables de Entorno (.env)
+```bash
+# Aplicación
+PORT=3000
+NODE_ENV=production
+API_KEY=tu_api_key_segura_aqui
+
+# Base de datos (opcional)
+DATABASE_URL=postgresql://user:password@localhost:5432/screenshots
+
+# Storage
+STORAGE_TYPE=local  # local, s3, cloudinary
+STORAGE_PATH=./storage/screenshots
+
+# AWS S3 (si se usa)
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_REGION=
+AWS_BUCKET=
+
+# Limites
+MAX_CONCURRENT_SCREENSHOTS=3
+SCREENSHOT_TIMEOUT=30000
+MAX_BATCH_SIZE=20
+```
+
+---
+
+## OPTIMIZACIONES Y CONSIDERACIONES
+
+### 1. **Procesamiento en Paralelo (Batch)**
+- Usar Promise.all con límite de concurrencia
+- Implementar queue system si el volumen es alto (Bull/BullMQ)
+
+### 2. **Cache**
+- Cachear screenshots recientes (Redis opcional)
+- TTL configurable (ej: 5 minutos)
+
+### 3. **Rate Limiting**
+- Implementar throttling para evitar abuse
+- Usar @nestjs/throttler
+
+### 4. **Manejo de Errores**
+- Reintentos automáticos en caso de falla (max 3)
+- Logging detallado de errores
+- Response apropiado con detalles de error
+
+### 5. **Limpieza de Archivos**
+- Cron job para eliminar screenshots antiguos (>24 horas)
+- Opcional: mantener historial en DB
+
+---
+
+## DOCUMENTACIÓN SWAGGER
+
+Configurar Swagger con ejemplos completos para cada endpoint:
+```typescript
+@ApiTags('screenshots')
+@Controller('screenshots')
+export class ScreenshotsController {
+  
+  @Post('batch')
+  @ApiOperation({ 
+    summary: 'Captura múltiple de gráficos',
+    description: 'Genera screenshots de múltiples símbolos en múltiples timeframes'
+  })
+  @ApiBody({ type: BatchScreenshotDto })
+  @ApiResponse({ status: 200, description: 'Screenshots generados exitosamente' })
+  async batchCapture(@Body() dto: BatchScreenshotDto) {
+    // ...
+  }
+}
+```
+
+---
+
+## INTEGRACIÓN CON MAKE.COM
+
+### Flujo de Trabajo Típico
+
+1. **Make.com Trigger** (Webhook, Schedule, etc.)
+2. **HTTP Request a /api/screenshots/batch**
+   - Enviar: `{ symbols: ["XAUUSD"], timeframes: ["240", "60", "5"] }`
+3. **Recibir URLs de imágenes**
+4. **Pasar URLs a Claude AI** vía otro módulo HTTP
+5. **Claude analiza las 3 imágenes** (multi-timeframe)
+6. **Devolver análisis técnico** con:
+   - Dirección probable (bullish/bearish/neutral)
+   - Niveles clave (Order Blocks, FVGs)
+   - Confluencias entre timeframes
+   - Recomendación de entrada
+
+---
+
+## TESTING
+
+### Tests Requeridos
+1. **Unit Tests** para cada servicio
+2. **E2E Tests** para endpoints principales
+3. **Integration Tests** para Puppeteer
+4. **Load Tests** para batch endpoint (simular 10+ símbolos)
+
+---
+
+## DEPLOYMENT
+
+### Docker Support
+Incluir Dockerfile optimizado:
+```dockerfile
+FROM node:18-alpine
+
+# Instalar dependencias de Puppeteer
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
+
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+RUN npm run build
+
+EXPOSE 3000
+CMD ["node", "dist/main"]
+```
+
+---
+
+## EJEMPLO DE USO COMPLETO
+
+### Caso de Uso: Análisis Multi-Timeframe de XAUUSD
+
+**Request a tu servicio:**
+```bash
+curl -X POST https://tu-servicio.com/api/screenshots/batch \
+  -H "x-api-key: tu_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "symbols": ["XAUUSD"],
+    "timeframes": ["240", "60", "5"],
+    "includeBase64": true,
+    "width": 1920,
+    "height": 1080
+  }'
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "totalImages": 3,
+    "screenshots": [
+      {
+        "symbol": "XAUUSD",
+        "timeframe": "4H",
+        "imageUrl": "https://...",
+        "base64": "data:image/png;base64,..."
+      },
+      // ... 1H y 5M
+    ]
+  }
+}
+```
+
+**Uso en Make.com:**
+1. Módulo HTTP Request → Tu servicio (batch)
+2. Iterator → Procesar cada screenshot
+3. HTTP Request → Claude AI API con cada imagen
+4. Aggregator → Compilar análisis de 3 timeframes
+5. Router → Decidir acción según confluencia
+6. HTTP Request → MT5 API (ejecutar trade si señal fuerte)
+
+---
+
+## PRIORIDADES DE IMPLEMENTACIÓN
+
+1. ✅ **Fase 1 (Esencial):**
+   - Estructura básica NestJS
+   - Endpoint /batch funcional
+   - Integración Puppeteer/TradingView
+   - API Key authentication
+   - Almacenamiento local de imágenes
+
+2. ✅ **Fase 2 (Importante):**
+   - Endpoint /single
+   - Procesamiento paralelo optimizado
+   - Manejo robusto de errores
+   - Logging detallado
+   - Tests básicos
+
+3. ⭐ **Fase 3 (Nice-to-have):**
+   - Cache con Redis
+   - Almacenamiento S3/Cloudinary
+   - Queue system (Bull)
+   - Dashboard de monitoreo
+   - Métricas de performance
+
+---
+
+## NOTAS FINALES
+
+- **Performance target:** Cada screenshot individual debe tomar <5 segundos
+- **Batch de 6 imágenes** (2 símbolos × 3 timeframes) debe completarse en <15 segundos
+- **Uptime requerido:** 99%+ (crítico para sistema de trading)
+- **Monitoreo:** Implementar health checks para integrar con servicios como UptimeRobot
+
+---
+
+## PREGUNTAS PARA CLAUDE CODE
+
+1. ¿Prefieres Puppeteer o Playwright? (recomiendo Puppeteer por familiaridad)
+2. ¿Base de datos PostgreSQL para historial o solo file system?
+3. ¿Implementar rate limiting desde el inicio?
+4. ¿Docker-compose para desarrollo local?
+5. ¿Tests desde fase 1 o después de MVP funcional?
+
+---
+
+**OBJETIVO FINAL:** 
+Servicio production-ready que reemplace completamente servicios de terceros, con capacidad de generar screenshots multi-timeframe de alta calidad para análisis de Smart Money Concepts con Claude AI, integrado perfectamente con Make.com para automatización de mi sistema de trading algorítmico de XAUUSD.
+
+Por favor, genera el código completo, bien estructurado, con comentarios explicativos en español, siguiendo las mejores prácticas de NestJS y TypeScript. Prioriza el endpoint /batch ya que es el core de mi workflow.
+
+## CONTEXTO ADICIONAL IMPORTANTE
+
+**Mi flujo de trabajo actual:**
+1. Make.com ejecuta cada hora (durante sesión de Londres/NY)
+2. Llama a tu servicio /batch con XAUUSD en 4H, 1H, 5M
+3. Recibe 3 URLs de imágenes
+4. Envía las 3 imágenes a Claude AI vía Anthropic API
+5. Claude analiza usando Smart Money Concepts:
+   - Order Blocks
+   - Fair Value Gaps
+   - Liquidity Sweeps
+   - Change of Character
+   - Break of Structure
+6. Claude genera señal: LONG/SHORT/NEUTRAL con confluencia
+7. Si hay confluencia fuerte (2+ timeframes alineados) → ejecutar trade en MT5
+
+**Por eso el endpoint /batch es CRÍTICO** - necesita ser:
+- ⚡ Rápido (< 15 segundos para 3 imágenes)
+- 🛡️ Confiable (manejo robusto de errores)
+- 🔄 Eficiente (procesamiento paralelo)
+- 📊 Observable (logs detallados para debugging)
+
+**Formato de respuesta preferido para Claude AI:**
+- Incluir base64 de imágenes (para enviar directo a Claude)
+- O alternativamente, URLs públicas accesibles
+- Metadata clara de símbolo + timeframe por imagen
