@@ -1,98 +1,252 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 📸 Screenshot Service - TradingView & Investing.com
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Servicio backend para captura automatizada de screenshots de gráficos financieros desde **TradingView** e **Investing.com**. Diseñado para integrarse con Make.com y Claude AI para análisis técnico multi-timeframe usando Smart Money Concepts.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 🚀 Características
 
-## Description
+- ✅ **Multi-Plataforma**: Soporte para TradingView e Investing.com
+- ✅ **Swagger/OpenAPI**: Documentación completa en `/api/docs`
+- ✅ **Captura Paralela**: Procesamiento concurrente con límite configurable
+- ✅ **Reintentos Automáticos**: Hasta 3 intentos con backoff exponencial
+- ✅ **API Key Protection**: Seguridad mediante header `x-api-key`
+- ✅ **Base64 Opcional**: Soporte para incluir imágenes en base64
+- ✅ **Tests Unitarios**: 19 tests pasando al 100%
+- ✅ **TypeScript**: Type-safe en todo el proyecto
+- ✅ **Logging Detallado**: Logs de todas las operaciones
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## 📋 Requisitos
 
-## Project setup
+- Node.js >= 18
+- npm >= 9
+- Chromium (instalado automáticamente por Puppeteer)
+
+## 🔧 Instalación
 
 ```bash
-$ npm install
+# Clonar repositorio
+git clone https://github.com/jose890823/screenshootfx_backend.git
+cd screenshootfx_backend
+
+# Instalar dependencias
+npm install
+
+# Configurar variables de entorno
+cp .env.example .env
+# Editar .env y configurar tu API_KEY
 ```
 
-## Compile and run the project
+## ⚙️ Configuración
+
+### Variables de Entorno (.env)
 
 ```bash
-# development
-$ npm run start
+PORT=3000
+NODE_ENV=development
+API_KEY=tu_api_key_segura_aqui
 
-# watch mode
-$ npm run start:dev
+MAX_CONCURRENT_SCREENSHOTS=3
+SCREENSHOT_TIMEOUT=30000
+MAX_BATCH_SIZE=20
 
-# production mode
-$ npm run start:prod
+STORAGE_TYPE=local
+STORAGE_PATH=./storage/screenshots
 ```
 
-## Run tests
+## 🏃 Ejecución
 
 ```bash
-# unit tests
-$ npm run test
+# Desarrollo con hot-reload
+npm run start:dev
 
-# e2e tests
-$ npm run test:e2e
+# Producción
+npm run build
+npm run start:prod
 
-# test coverage
-$ npm run test:cov
+# Debug
+npm run start:debug
 ```
 
-## Deployment
+La aplicación estará disponible en:
+- API: `http://localhost:3000`
+- Swagger: `http://localhost:3000/api/docs`
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## 📡 Endpoints
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### POST /screenshots/batch
+
+Captura múltiple de screenshots (endpoint principal).
+
+**Request:**
+```json
+{
+  "symbols": ["XAUUSD", "EURUSD"],
+  "timeframes": ["240", "60", "5"],
+  "platform": "tradingview",
+  "includeBase64": false,
+  "width": 1920,
+  "height": 1080,
+  "format": "png"
+}
+```
+
+**Headers:**
+```
+x-api-key: tu_api_key
+Content-Type: application/json
+```
+
+### POST /screenshots/single
+
+Captura individual de screenshot.
+
+**Request:**
+```json
+{
+  "symbol": "XAUUSD",
+  "timeframe": "240",
+  "platform": "tradingview",
+  "width": 1920,
+  "height": 1080,
+  "format": "png"
+}
+```
+
+### GET /health
+
+Health check del servicio.
+
+## 🧪 Tests
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# Ejecutar todos los tests
+npm run test
+
+# Tests con cobertura
+npm run test:cov
+
+# Tests en modo watch
+npm run test:watch
+
+# Tests específicos
+npm test -- dto  # Solo tests de DTOs
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+**Cobertura Actual: 19 tests pasando al 100%**
 
-## Resources
+## 📖 Documentación Swagger
 
-Check out a few resources that may come in handy when working with NestJS:
+Accede a `http://localhost:3000/api/docs` para ver:
+- Documentación completa de endpoints
+- Schemas de requests/responses
+- Probador interactivo de API
+- Ejemplos de uso
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## 🏗️ Arquitectura
 
-## Support
+```
+src/
+├── common/
+│   ├── guards/
+│   │   └── api-key.guard.ts       # Autenticación por API Key
+│   ├── interfaces/
+│   │   └── platform.interface.ts  # Interface para plataformas
+│   └── utils/
+│       ├── tradingview.helper.ts  # Helper TradingView
+│       ├── investing.helper.ts    # Helper Investing.com
+│       └── platform.factory.ts    # Factory de plataformas
+├── modules/
+│   └── screenshots/
+│       ├── dto/                   # DTOs con validaciones
+│       ├── screenshots.controller.ts
+│       ├── screenshots.service.ts
+│       └── screenshots.module.ts
+└── main.ts                        # Configuración Swagger
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## 🔐 Seguridad
 
-## Stay in touch
+- Todos los endpoints protegidos con API Key
+- Validación estricta de inputs con class-validator
+- Rate limiting configurable (próximamente)
+- CORS habilitado para desarrollo
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## 🌐 Plataformas Soportadas
 
-## License
+### TradingView
+- ⚡ Rápida (2-3s por screenshot)
+- ✅ Mínima publicidad
+- ✅ Alta estabilidad
+- ✅ Mejor para análisis técnico detallado
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+### Investing.com
+- 🐢 Más lenta (3-5s por screenshot)
+- ⚠️ Más publicidad
+- ✅ Vista alternativa
+- ✅ Útil como backup
+
+## 🛠️ Desarrollo
+
+```bash
+# Lint
+npm run lint
+
+# Format
+npm run format
+
+# Build
+npm run build
+```
+
+## 📝 Notas
+
+- Los screenshots se guardan en `./storage/screenshots/`
+- Formato de nombre: `{symbol}_{timeframe}_{timestamp}.{format}`
+- El servicio limpia automáticamente archivos antiguos (configurable)
+- Soporte para timeframes: 1M, 5M, 15M, 30M, 1H, 4H, 1D
+
+## 🤝 Integración con Make.com
+
+Este servicio está diseñado para integrarse perfectamente con Make.com:
+
+1. **Trigger** en Make.com (schedule/webhook)
+2. **HTTP Request** a `/screenshots/batch`
+3. **Recibir** URLs de screenshots
+4. **Enviar** a Claude AI para análisis
+5. **Ejecutar** trade si hay confluencia
+
+## 📄 Documentación Adicional
+
+- `CLAUDE.md`: Guía completa para Claude Code (1086 líneas)
+- `CONTEXTO`: Especificaciones del proyecto en español
+- `.env.example`: Template de variables de entorno
+
+## 🐛 Troubleshooting
+
+### Error: Puppeteer no puede lanzar Chromium
+
+```bash
+# Linux
+sudo apt-get install -y chromium-browser
+
+# macOS
+brew install chromium
+
+# Docker: Ver Dockerfile para dependencias
+```
+
+### Error: API Key inválida
+
+Verifica que el header `x-api-key` coincida con `API_KEY` en tu `.env`.
+
+## 📜 Licencia
+
+MIT
+
+## 👤 Autor
+
+**Jose**
+- GitHub: [@jose890823](https://github.com/jose890823)
+
+---
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
