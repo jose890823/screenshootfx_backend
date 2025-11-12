@@ -6,6 +6,7 @@ import {
   IsIn,
   Min,
   Max,
+  IsNotEmpty,
 } from 'class-validator';
 
 /**
@@ -17,6 +18,7 @@ export class SingleScreenshotDto {
     example: 'XAUUSD',
   })
   @IsString()
+  @IsNotEmpty({ message: 'El símbolo no puede estar vacío' })
   symbol: string;
 
   @ApiProperty({
@@ -24,6 +26,7 @@ export class SingleScreenshotDto {
     example: '240',
   })
   @IsString()
+  @IsNotEmpty({ message: 'El timeframe no puede estar vacío' })
   timeframe: string;
 
   @ApiProperty({
