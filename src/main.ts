@@ -38,12 +38,8 @@ async function bootstrap() {
   // Habilitar CORS para desarrollo
   app.enableCors();
 
-  const port = process.env.PORT ?? 3000;
-  await app.listen(port);
-
-  console.log(`🚀 Aplicación corriendo en puerto: ${port}`);
-  console.log(`📚 Swagger disponible en: /api/docs`);
-  console.log(`❤️  Health check en: /api/health`);
-  console.log(`🌍 Entorno: ${process.env.NODE_ENV || 'development'}`);
+  await app.listen(process.env.PORT ?? 3000);
+  console.log(`🚀 Aplicación corriendo en: http://localhost:${process.env.PORT ?? 3000}`);
+  console.log(`📚 Swagger disponible en: http://localhost:${process.env.PORT ?? 3000}/api/docs`);
 }
 bootstrap();
