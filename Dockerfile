@@ -37,14 +37,17 @@ WORKDIR /app
 # Copiar archivos de dependencias
 COPY package*.json ./
 
-# Instalar dependencias de producción
-RUN npm ci --only=production
+# Instalar TODAS las dependencias (necesarias para compilar)
+RUN npm ci
 
 # Copiar código fuente
 COPY . .
 
 # Compilar aplicación NestJS
 RUN npm run build
+
+# Limpiar devDependencies después del build para reducir tamaño
+RUN npm prune --production
 
 # Crear directorio para screenshots (aunque en producción no se usará con saveToStorage=false)
 RUN mkdir -p /app/storage/screenshots
