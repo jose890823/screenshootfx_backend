@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ScreenshotsModule } from './modules/screenshots/screenshots.module';
 import { ApiKeysModule } from './modules/api-keys/api-keys.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ApiKeysModule } from './modules/api-keys/api-keys.module';
     }),
     ScreenshotsModule,
     ApiKeysModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
