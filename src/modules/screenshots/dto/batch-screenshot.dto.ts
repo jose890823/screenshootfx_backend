@@ -98,4 +98,14 @@ export class BatchScreenshotDto {
   @IsOptional()
   @IsIn(['png', 'jpg'], { message: 'Formato debe ser png o jpg' })
   format?: string = 'png';
+
+  @ApiProperty({
+    description: 'Guardar imágenes en almacenamiento local (usar false en producción para solo retornar base64)',
+    example: false,
+    default: false,
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  saveToStorage?: boolean = false;
 }

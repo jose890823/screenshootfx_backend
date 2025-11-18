@@ -19,6 +19,8 @@ describe('SingleScreenshotDto', () => {
     dto.width = 2560;
     dto.height = 1440;
     dto.format = 'jpg';
+    dto.includeBase64 = true;
+    dto.saveToStorage = true;
 
     const errors = await validate(dto);
     expect(errors.length).toBe(0);
@@ -74,6 +76,8 @@ describe('SingleScreenshotDto', () => {
     expect(dto.width).toBe(1920);
     expect(dto.height).toBe(1080);
     expect(dto.format).toBe('png');
+    expect(dto.includeBase64).toBe(false);
+    expect(dto.saveToStorage).toBe(false);
   });
 
   it('debe rechazar dimensiones fuera de rango', async () => {
@@ -84,5 +88,16 @@ describe('SingleScreenshotDto', () => {
 
     const errors = await validate(dto);
     expect(errors.length).toBeGreaterThan(0);
+  });
+
+  it('debe validar includeBase64 y saveToStorage correctamente', async () => {
+    const dto = new SingleScreenshotDto();
+    dto.symbol = 'XAUUSD';
+    dto.timeframe = '240';
+    dto.includeBase64 = true;
+    dto.saveToStorage = false; // Modo producción: solo base64
+
+    const errors = await validate(dto);
+    expect(errors.length).toBe(0);
   });
 });

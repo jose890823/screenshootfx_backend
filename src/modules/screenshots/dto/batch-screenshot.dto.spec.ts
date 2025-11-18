@@ -128,5 +128,26 @@ describe('BatchScreenshotDto', () => {
     expect(dto.width).toBe(1920);
     expect(dto.height).toBe(1080);
     expect(dto.format).toBe('png');
+    expect(dto.saveToStorage).toBe(false);
+  });
+
+  it('debe validar saveToStorage con valor true', async () => {
+    const dto = new BatchScreenshotDto();
+    dto.symbols = ['XAUUSD'];
+    dto.timeframes = ['240'];
+    dto.saveToStorage = true;
+
+    const errors = await validate(dto);
+    expect(errors.length).toBe(0);
+  });
+
+  it('debe validar saveToStorage con valor false', async () => {
+    const dto = new BatchScreenshotDto();
+    dto.symbols = ['XAUUSD'];
+    dto.timeframes = ['240'];
+    dto.saveToStorage = false;
+
+    const errors = await validate(dto);
+    expect(errors.length).toBe(0);
   });
 });

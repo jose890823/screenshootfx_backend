@@ -195,25 +195,37 @@ export class ScreenshotsService {
 
         await browser.close();
 
-        // Guardar archivo
+        // Preparar datos básicos
         const timestamp = Date.now();
         const filename = `${symbol}_${timeframe}_${timestamp}.${options.format || 'png'}`;
-        const filepath = join(this.storagePath, filename);
 
-        writeFileSync(filepath, screenshot);
+        // Guardar archivo solo si saveToStorage es true
+        let imageUrl: string | null = null;
+        if (options.saveToStorage) {
+          const filepath = join(this.storagePath, filename);
+          writeFileSync(filepath, screenshot);
+          imageUrl = `/screenshots/${filename}`;
+          this.logger.debug(`Screenshot guardado en: ${filepath}`);
+        } else {
+          this.logger.debug(`Screenshot NO guardado (saveToStorage=false)`);
+        }
 
         // Preparar response
         const result: any = {
           symbol,
           timeframe: this.formatTimeframe(timeframe),
           platform: platformHelper.getPlatformName(),
-          imageUrl: `/screenshots/${filename}`,
           metadata: {
             capturedAt: new Date().toISOString(),
             fileSize: `${(screenshot.length / 1024).toFixed(2)}KB`,
             dimensions: `${options.width || 1920}x${options.height || 1080}`,
           },
         };
+
+        // Incluir imageUrl solo si se guardó
+        if (imageUrl) {
+          result.imageUrl = imageUrl;
+        }
 
         // Incluir base64 si se solicita
         if (options.includeBase64) {

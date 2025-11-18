@@ -3,6 +3,7 @@ import {
   IsString,
   IsOptional,
   IsNumber,
+  IsBoolean,
   IsIn,
   Min,
   Max,
@@ -80,4 +81,24 @@ export class SingleScreenshotDto {
   @IsOptional()
   @IsIn(['png', 'jpg'], { message: 'Formato debe ser png o jpg' })
   format?: string = 'png';
+
+  @ApiProperty({
+    description: 'Incluir imágenes en formato base64 en la respuesta',
+    example: true,
+    default: false,
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  includeBase64?: boolean = false;
+
+  @ApiProperty({
+    description: 'Guardar imágenes en almacenamiento local (usar false en producción para solo retornar base64)',
+    example: false,
+    default: false,
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  saveToStorage?: boolean = false;
 }
