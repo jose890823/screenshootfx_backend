@@ -11,12 +11,13 @@ export default () => ({
   masterKey: process.env.MASTER_KEY,
 
   // Base de datos
+  // Railway provee variables PG* automáticamente, con fallback a DB_*
   database: {
-    host: process.env.DB_HOST,
-    port: parseInt(process.env.DB_PORT || '5432', 10),
-    username: process.env.DB_USERNAME,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_DATABASE,
+    host: process.env.PGHOST || process.env.DB_HOST,
+    port: parseInt(process.env.PGPORT || process.env.DB_PORT || '5432', 10),
+    username: process.env.PGUSER || process.env.DB_USERNAME,
+    password: process.env.PGPASSWORD || process.env.DB_PASSWORD,
+    database: process.env.PGDATABASE || process.env.DB_DATABASE,
   },
 
   // Puppeteer

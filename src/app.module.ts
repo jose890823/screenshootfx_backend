@@ -17,11 +17,12 @@ import configuration from './config/configuration';
     }),
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: process.env.DB_HOST,
-      port: parseInt(process.env.DB_PORT || '5432', 10),
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_DATABASE,
+      // Railway provee estas variables automáticamente cuando conectas PostgreSQL
+      host: process.env.PGHOST || process.env.DB_HOST,
+      port: parseInt(process.env.PGPORT || process.env.DB_PORT || '5432', 10),
+      username: process.env.PGUSER || process.env.DB_USERNAME,
+      password: process.env.PGPASSWORD || process.env.DB_PASSWORD,
+      database: process.env.PGDATABASE || process.env.DB_DATABASE,
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: process.env.NODE_ENV !== 'production', // Auto-sync en desarrollo
       logging: process.env.NODE_ENV === 'development',
