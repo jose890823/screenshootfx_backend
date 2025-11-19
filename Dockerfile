@@ -42,10 +42,10 @@ RUN mkdir -p /app/storage/screenshots
 # Railway asigna dinámicamente el puerto, no usar EXPOSE fijo
 # EXPOSE 3000
 
-# Usuario no-root para seguridad
-RUN groupadd -r appuser && useradd -r -g appuser appuser
-RUN chown -R appuser:appuser /app
-USER appuser
+# Usuario no-root para seguridad (comentado temporalmente para debugging)
+# RUN groupadd -r appuser && useradd -r -g appuser appuser
+# RUN chown -R appuser:appuser /app
+# USER appuser
 
 # Comando para iniciar la aplicación
 CMD ["node", "dist/main.js"]
