@@ -188,8 +188,9 @@ export class ScreenshotsService {
           timeout: 10000,
         });
 
-        // Buffer adicional para renderizado completo
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        // Buffer adicional para renderizado completo (específico por plataforma)
+        const renderDelay = platformHelper.getRenderDelay();
+        await new Promise((resolve) => setTimeout(resolve, renderDelay));
 
         // Limpiar elementos de UI
         const elementsToRemove = platformHelper.getElementsToRemove();

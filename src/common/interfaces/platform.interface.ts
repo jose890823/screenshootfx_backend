@@ -48,4 +48,11 @@ export interface IPlatformHelper {
    * @returns Nombre de la plataforma
    */
   getPlatformName(): string;
+
+  /**
+   * Retorna el delay en milisegundos después de esperar el selector
+   * para garantizar que el gráfico termine de renderizarse
+   * @returns Delay en ms
+   */
+  getRenderDelay(): number;
 }

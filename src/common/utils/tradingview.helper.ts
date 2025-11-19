@@ -79,4 +79,12 @@ export class TradingViewHelper implements IPlatformHelper {
   getPlatformName(): string {
     return 'tradingview';
   }
+
+  /**
+   * Delay después de esperar el selector para garantizar renderizado completo
+   * TradingView es más rápido, solo necesita 2 segundos
+   */
+  getRenderDelay(): number {
+    return 2000; // 2 segundos
+  }
 }
