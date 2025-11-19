@@ -6,7 +6,6 @@ import { AppService } from './app.service';
 import { ScreenshotsModule } from './modules/screenshots/screenshots.module';
 import { ApiKeysModule } from './modules/api-keys/api-keys.module';
 import { HealthModule } from './modules/health/health.module';
-import { SupabaseModule } from './modules/supabase/supabase.module';
 import configuration from './config/configuration';
 
 @Module({
@@ -31,9 +30,8 @@ import configuration from './config/configuration';
       ssl:
         process.env.NODE_ENV === 'production'
           ? { rejectUnauthorized: false }
-          : false, // Railway/Supabase requieren SSL
+          : false, // Railway requiere SSL en producción
     }),
-    SupabaseModule, // Módulo global para Supabase Storage (opcional)
     ScreenshotsModule,
     ApiKeysModule,
     HealthModule,

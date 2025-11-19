@@ -41,11 +41,4 @@ export default () => ({
       bucket: process.env.AWS_BUCKET,
     },
   },
-
-  // Supabase (Opcional - para DB y/o Storage)
-  supabase: {
-    url: process.env.SUPABASE_URL,
-    anonKey: process.env.SUPABASE_ANON_KEY,
-    storageBucket: process.env.SUPABASE_STORAGE_BUCKET || 'screenshots',
-  },
 });
