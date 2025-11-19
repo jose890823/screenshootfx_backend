@@ -208,10 +208,13 @@ export class ScreenshotsService {
         }, elementsToRemove);
 
         // Capturar screenshot
-        const screenshot = await page.screenshot({
+        const screenshotData = await page.screenshot({
           type: (options.format || 'png') as 'png' | 'jpeg',
           fullPage: false,
         });
+
+        // Convertir a Buffer para compatibilidad con Supabase y escritura de archivos
+        const screenshot = Buffer.from(screenshotData);
 
         await browser.close();
 
