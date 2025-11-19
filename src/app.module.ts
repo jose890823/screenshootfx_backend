@@ -6,11 +6,15 @@ import { AppService } from './app.service';
 import { ScreenshotsModule } from './modules/screenshots/screenshots.module';
 import { ApiKeysModule } from './modules/api-keys/api-keys.module';
 import { HealthModule } from './modules/health/health.module';
+import configuration from './config/configuration';
+import { validate } from './config/env.validation';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      load: [configuration],
+      validate, // Validar variables de entorno al inicio
     }),
     TypeOrmModule.forRoot({
       type: 'postgres',

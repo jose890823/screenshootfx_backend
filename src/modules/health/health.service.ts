@@ -26,6 +26,7 @@ export interface HealthResponse {
     puppeteer: HealthCheckResult;
     storage: HealthCheckResult;
     database: HealthCheckResult;
+    environment: HealthCheckResult;
   };
 }
 
@@ -58,6 +59,7 @@ export class HealthService {
       puppeteer: await this.checkPuppeteer(),
       storage: await this.checkStorage(),
       database: await this.checkDatabase(),
+      environment: await this.checkEnvironment(),
     };
 
     // Determinar estado general
@@ -207,6 +209,77 @@ export class HealthService {
       return {
         status: 'down',
         message: 'Database connection failed',
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Verifica que las variables de entorno críticas están configuradas
+   */
+  private async checkEnvironment(): Promise<HealthCheckResult> {
+    try {
+      const criticalVars = [
+        'MASTER_KEY',
+        'DB_HOST',
+        'DB_USERNAME',
+        'DB_PASSWORD',
+        'DB_DATABASE',
+      ];
+
+      const missingVars = criticalVars.filter((varName) => !process.env[varName]);
+
+      const configuredVars = {
+        port: process.env.PORT ? '✅' : '⚠️ (default: 3000)',
+        nodeEnv: process.env.NODE_ENV ? '✅' : '⚠️ (default: development)',
+        masterKey: process.env.MASTER_KEY ? '✅' : '❌',
+        dbHost: process.env.DB_HOST ? '✅' : '❌',
+        dbPort: process.env.DB_PORT ? '✅' : '⚠️ (default: 5432)',
+        dbUsername: process.env.DB_USERNAME ? '✅' : '❌',
+        dbPassword: process.env.DB_PASSWORD ? '✅' : '❌',
+        dbDatabase: process.env.DB_DATABASE ? '✅' : '❌',
+        maxConcurrentScreenshots: process.env.MAX_CONCURRENT_SCREENSHOTS
+          ? '✅'
+          : '⚠️ (default: 3)',
+        screenshotTimeout: process.env.SCREENSHOT_TIMEOUT
+          ? '✅'
+          : '⚠️ (default: 30000)',
+        maxBatchSize: process.env.MAX_BATCH_SIZE ? '✅' : '⚠️ (default: 20)',
+        storageType: process.env.STORAGE_TYPE ? '✅' : '⚠️ (default: local)',
+        storagePath: process.env.STORAGE_PATH
+          ? '✅'
+          : '⚠️ (default: ./storage/screenshots)',
+      };
+
+      if (missingVars.length > 0) {
+        return {
+          status: 'down',
+          message: `Missing ${missingVars.length} critical environment variable(s)`,
+          error: `Variables faltantes: ${missingVars.join(', ')}`,
+          metadata: {
+            missingVars,
+            configuredVars,
+          },
+        };
+      }
+
+      return {
+        status: 'up',
+        message: 'All critical environment variables are configured',
+        metadata: {
+          configuredVars,
+          totalConfigured: Object.keys(configuredVars).filter(
+            (key) => configuredVars[key] === '✅',
+          ).length,
+          totalWithDefaults: Object.keys(configuredVars).filter((key) =>
+            configuredVars[key].includes('default'),
+          ).length,
+        },
+      };
+    } catch (error) {
+      return {
+        status: 'down',
+        message: 'Environment check failed',
         error: error.message,
       };
     }
