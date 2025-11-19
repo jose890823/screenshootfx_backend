@@ -18,7 +18,6 @@ import configuration from './config/configuration';
     TypeOrmModule.forRoot({
       type: 'postgres',
       // Railway provee estas variables automáticamente cuando conectas PostgreSQL
-      // O usa las credenciales de Supabase si las configuras en PG*
       host: process.env.PGHOST || process.env.DB_HOST,
       port: parseInt(process.env.PGPORT || process.env.DB_PORT || '5432', 10),
       username: process.env.PGUSER || process.env.DB_USERNAME,

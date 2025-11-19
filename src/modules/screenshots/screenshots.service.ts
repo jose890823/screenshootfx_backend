@@ -206,7 +206,7 @@ export class ScreenshotsService {
           fullPage: false,
         });
 
-        // Convertir a Buffer para compatibilidad con Supabase y escritura de archivos
+        // Convertir a Buffer para escritura de archivos
         const screenshot = Buffer.from(screenshotData);
 
         await browser.close();

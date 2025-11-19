@@ -5,7 +5,6 @@ import { TradingViewHelper } from '../../common/utils/tradingview.helper';
 import { InvestingHelper } from '../../common/utils/investing.helper';
 import { PlatformFactory } from '../../common/utils/platform.factory';
 import { ApiKeysModule } from '../api-keys/api-keys.module';
-import { SupabaseModule } from '../supabase/supabase.module';
 
 /**
  * Módulo de Screenshots
@@ -14,7 +13,6 @@ import { SupabaseModule } from '../supabase/supabase.module';
 @Module({
   imports: [
     ApiKeysModule, // Para usar ApiKeysService en ApiKeyGuard
-    SupabaseModule, // Para storage opcional en Supabase
   ],
   controllers: [ScreenshotsController],
   providers: [
