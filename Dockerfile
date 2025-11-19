@@ -39,7 +39,8 @@ RUN npm run build
 RUN mkdir -p /app/storage/screenshots
 
 # Exponer el puerto (Railway usa la variable PORT)
-EXPOSE 3000
+# Railway asigna dinámicamente el puerto, no usar EXPOSE fijo
+# EXPOSE 3000
 
 # Usuario no-root para seguridad
 RUN groupadd -r appuser && useradd -r -g appuser appuser
