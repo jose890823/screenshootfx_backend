@@ -112,6 +112,16 @@ export class EnvironmentVariables {
  * Se ejecuta al inicio de la aplicación y lanza un error si alguna variable requerida falta
  */
 export function validate(config: Record<string, unknown>) {
+  console.log('🔍 DEBUG: Variables recibidas en validate():');
+  console.log('  Total de keys:', Object.keys(config).length);
+  console.log('  NODE_ENV:', config.NODE_ENV || 'NOT SET');
+  console.log('  PORT:', config.PORT || 'NOT SET');
+  console.log('  MASTER_KEY:', config.MASTER_KEY ? 'SET (hidden)' : 'NOT SET');
+  console.log('  DB_HOST:', config.DB_HOST || 'NOT SET');
+  console.log('  DB_USERNAME:', config.DB_USERNAME || 'NOT SET');
+  console.log('  DB_DATABASE:', config.DB_DATABASE || 'NOT SET');
+  console.log('');
+
   // Convertir números de string a number
   const processedConfig = {
     ...config,
@@ -150,11 +160,29 @@ export function validate(config: Record<string, unknown>) {
       })
       .join('\n');
 
+    console.error('\n❌ VALIDACIÓN DE VARIABLES DE ENTORNO FALLIDA:');
+    console.error(errorMessages);
+    console.error('\n📋 INSTRUCCIONES PARA RAILWAY:');
+    console.error('1. Ve a tu proyecto en Railway (https://railway.app)');
+    console.error('2. Selecciona tu servicio');
+    console.error('3. Ve a la pestaña "Variables"');
+    console.error('4. Agrega estas variables (copia exactamente los nombres):');
+    console.error('   - MASTER_KEY=tu-master-key-aqui');
+    console.error('   - DB_HOST=tu-host-de-postgres');
+    console.error('   - DB_PORT=5432');
+    console.error('   - DB_USERNAME=postgres');
+    console.error('   - DB_PASSWORD=tu-password');
+    console.error('   - DB_DATABASE=screenshoot_fx');
+    console.error('   - NODE_ENV=production');
+    console.error('   - PORT=3000');
+    console.error('5. Railway reiniciará automáticamente el servicio\n');
+
     throw new Error(
       `❌ VALIDACIÓN DE VARIABLES DE ENTORNO FALLIDA:\n\n${errorMessages}\n\n` +
         `Por favor verifica tu archivo .env o las variables de entorno en Railway/producción.`,
     );
   }
 
+  console.log('✅ Validación de variables de entorno completada exitosamente\n');
   return validatedConfig;
 }
