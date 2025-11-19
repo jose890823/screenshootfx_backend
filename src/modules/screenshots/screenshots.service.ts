@@ -171,10 +171,10 @@ export class ScreenshotsService {
 
         const page = await browser.newPage();
 
-        // Configurar viewport
+        // Configurar viewport - 2560x1440 (QHD/2K) para mejor calidad de análisis con Claude AI
         await page.setViewport({
-          width: options.width || 1920,
-          height: options.height || 1080,
+          width: options.width || 2560,
+          height: options.height || 1440,
         });
 
         // Navegar a la URL
