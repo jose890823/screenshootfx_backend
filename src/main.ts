@@ -29,13 +29,13 @@ function logEnvironmentVariables() {
   console.log('\n🔐 SEGURIDAD:');
   console.log(`  MASTER_KEY: ${maskSensitiveValue(process.env.MASTER_KEY)} ${process.env.MASTER_KEY ? '✅' : '❌'}`);
 
-  // Base de Datos
+  // Base de Datos (Railway usa PG*, con fallback a DB_*)
   console.log('\n🗄️  BASE DE DATOS:');
-  console.log(`  DB_HOST: ${process.env.DB_HOST || '❌ NO CONFIGURADO'} ${process.env.DB_HOST ? '✅' : '❌'}`);
-  console.log(`  DB_PORT: ${process.env.DB_PORT || '5432'} ${process.env.DB_PORT ? '✅' : '⚠️ (usando default)'}`);
-  console.log(`  DB_USERNAME: ${process.env.DB_USERNAME || '❌ NO CONFIGURADO'} ${process.env.DB_USERNAME ? '✅' : '❌'}`);
-  console.log(`  DB_PASSWORD: ${maskSensitiveValue(process.env.DB_PASSWORD)} ${process.env.DB_PASSWORD ? '✅' : '❌'}`);
-  console.log(`  DB_DATABASE: ${process.env.DB_DATABASE || '❌ NO CONFIGURADO'} ${process.env.DB_DATABASE ? '✅' : '❌'}`);
+  console.log(`  PGHOST: ${process.env.PGHOST || '❌ NO CONFIGURADO'} ${process.env.PGHOST ? '✅' : '❌'}`);
+  console.log(`  PGPORT: ${process.env.PGPORT || '5432'} ${process.env.PGPORT ? '✅' : '⚠️ (usando default)'}`);
+  console.log(`  PGUSER: ${process.env.PGUSER || '❌ NO CONFIGURADO'} ${process.env.PGUSER ? '✅' : '❌'}`);
+  console.log(`  PGPASSWORD: ${maskSensitiveValue(process.env.PGPASSWORD)} ${process.env.PGPASSWORD ? '✅' : '❌'}`);
+  console.log(`  PGDATABASE: ${process.env.PGDATABASE || '❌ NO CONFIGURADO'} ${process.env.PGDATABASE ? '✅' : '❌'}`);
 
   // Puppeteer
   console.log('\n🤖 PUPPETEER:');
@@ -59,16 +59,20 @@ function logEnvironmentVariables() {
 
   console.log('\n=================================================\n');
 
-  // Verificar variables críticas
+  // Verificar variables críticas (Railway usa PG*, con fallback a DB_*)
   const criticalVars = [
     'MASTER_KEY',
-    'DB_HOST',
-    'DB_USERNAME',
-    'DB_PASSWORD',
-    'DB_DATABASE',
   ];
 
+  // Verificar que al menos las variables PG* O DB_* estén configuradas
+  const hasPgVars = process.env.PGHOST && process.env.PGUSER && process.env.PGPASSWORD && process.env.PGDATABASE;
+  const hasDbVars = process.env.DB_HOST && process.env.DB_USERNAME && process.env.DB_PASSWORD && process.env.DB_DATABASE;
+
   const missingVars = criticalVars.filter((varName) => !process.env[varName]);
+
+  if (!hasPgVars && !hasDbVars) {
+    missingVars.push('Database variables (PGHOST/PGUSER/PGPASSWORD/PGDATABASE or DB_HOST/DB_USERNAME/DB_PASSWORD/DB_DATABASE)');
+  }
 
   if (missingVars.length > 0) {
     console.error('❌ ERROR: Variables críticas faltantes:');
