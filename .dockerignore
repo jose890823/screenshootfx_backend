@@ -1,0 +1,43 @@
+# Dependencias
+node_modules
+npm-debug.log
+
+# Archivos de desarrollo
+.env
+.env.local
+.env.*.local
+
+# Build output
+dist
+coverage
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+
+# Tests
+*.spec.ts
+test
+coverage
+
+# Logs
+logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Screenshots locales (no copiar al build)
+storage/screenshots/*
+!storage/screenshots/.gitkeep
+
+# Documentación
+README.md
+CLAUDE.md
+RAILWAY_SETUP.md
+CONTEXTO

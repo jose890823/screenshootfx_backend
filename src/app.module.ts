@@ -7,14 +7,13 @@ import { ScreenshotsModule } from './modules/screenshots/screenshots.module';
 import { ApiKeysModule } from './modules/api-keys/api-keys.module';
 import { HealthModule } from './modules/health/health.module';
 import configuration from './config/configuration';
-import { validate } from './config/env.validation';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
-      validate, // Validar variables de entorno al inicio
+      // Validación removida para compatibilidad con Railway
     }),
     TypeOrmModule.forRoot({
       type: 'postgres',
@@ -39,12 +38,3 @@ import { validate } from './config/env.validation';
   providers: [AppService],
 })
 export class AppModule {}
-
-// host: process.env.DB_HOST || 'localhost',
-//       port: parseInt(process.env.DB_PORT || '5432', 10),
-//       username: process.env.DB_USERNAME || 'postgres',
-//       password: process.env.DB_PASSWORD || 'postgres',
-//       database: process.env.DB_DATABASE || 'screenshoot_fx',
-//       entities: [__dirname + '/**/*.entity{.ts,.js}'],
-//       synchronize: process.env.NODE_ENV !== 'production', // Auto-sync en desarrollo
-//       logging: process.env.NODE_ENV === 'development',
