@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ScreenshotsModule } from './modules/screenshots/screenshots.module';
 import { ApiKeysModule } from './modules/api-keys/api-keys.module';
 import { HealthModule } from './modules/health/health.module';
+
+const configService = new ConfigService();
 
 @Module({
   imports: [
@@ -14,18 +16,18 @@ import { HealthModule } from './modules/health/health.module';
     }),
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: process.env.DB_HOST,
-      port: parseInt(process.env.DB_PORT || '5432', 10),
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_DATABASE,
+      host: configService.get('DB_HOST'),
+      port: configService.get('DB_PORT'),
+      username: configService.get('DB_USER'),
+      password: configService.get('DB_PASSWORD'),
+      database: configService.get('DB_NAME'),
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: process.env.NODE_ENV !== 'production', // Auto-sync en desarrollo
-      logging: process.env.NODE_ENV === 'development',
-      ssl:
-        process.env.NODE_ENV === 'production'
-          ? { rejectUnauthorized: false }
-          : false, // Railway requiere SSL
+      synchronize: true,
+      logging: true,
+      // ssl:
+      //   process.env.NODE_ENV === 'production'
+      //     ? { rejectUnauthorized: false }
+      //     : false, // Railway requiere SSL
     }),
     ScreenshotsModule,
     ApiKeysModule,
