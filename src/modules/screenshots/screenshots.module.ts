@@ -5,13 +5,17 @@ import { TradingViewHelper } from '../../common/utils/tradingview.helper';
 import { InvestingHelper } from '../../common/utils/investing.helper';
 import { PlatformFactory } from '../../common/utils/platform.factory';
 import { ApiKeysModule } from '../api-keys/api-keys.module';
+import { SupabaseModule } from '../supabase/supabase.module';
 
 /**
  * Módulo de Screenshots
  * Maneja toda la lógica de captura de screenshots de gráficos financieros
  */
 @Module({
-  imports: [ApiKeysModule], // Importar para usar ApiKeysService en ApiKeyGuard
+  imports: [
+    ApiKeysModule, // Para usar ApiKeysService en ApiKeyGuard
+    SupabaseModule, // Para storage opcional en Supabase
+  ],
   controllers: [ScreenshotsController],
   providers: [
     ScreenshotsService,

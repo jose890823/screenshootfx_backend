@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { ScreenshotsModule } from './modules/screenshots/screenshots.module';
 import { ApiKeysModule } from './modules/api-keys/api-keys.module';
 import { HealthModule } from './modules/health/health.module';
+import { SupabaseModule } from './modules/supabase/supabase.module';
 import configuration from './config/configuration';
 
 @Module({
@@ -18,6 +19,7 @@ import configuration from './config/configuration';
     TypeOrmModule.forRoot({
       type: 'postgres',
       // Railway provee estas variables automáticamente cuando conectas PostgreSQL
+      // O usa las credenciales de Supabase si las configuras en PG*
       host: process.env.PGHOST || process.env.DB_HOST,
       port: parseInt(process.env.PGPORT || process.env.DB_PORT || '5432', 10),
       username: process.env.PGUSER || process.env.DB_USERNAME,
@@ -29,8 +31,9 @@ import configuration from './config/configuration';
       ssl:
         process.env.NODE_ENV === 'production'
           ? { rejectUnauthorized: false }
-          : false, // Railway requiere SSL
+          : false, // Railway/Supabase requieren SSL
     }),
+    SupabaseModule, // Módulo global para Supabase Storage (opcional)
     ScreenshotsModule,
     ApiKeysModule,
     HealthModule,

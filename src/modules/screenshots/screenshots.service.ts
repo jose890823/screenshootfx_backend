@@ -1,25 +1,45 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as puppeteer from 'puppeteer';
 import { writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 import { PlatformFactory } from '../../common/utils/platform.factory';
+import { SupabaseService } from '../supabase/supabase.service';
 import { BatchScreenshotDto } from './dto/batch-screenshot.dto';
 import { SingleScreenshotDto } from './dto/single-screenshot.dto';
 
 /**
  * Servicio para captura de screenshots de gráficos financieros
  * Soporta TradingView e Investing.com con Puppeteer
+ * Almacenamiento: local, Supabase Storage o S3
  */
 @Injectable()
 export class ScreenshotsService {
   private readonly logger = new Logger(ScreenshotsService.name);
   private readonly maxRetries = 3;
-  private readonly storagePath = process.env.STORAGE_PATH || './storage/screenshots';
+  private readonly storagePath: string;
+  private readonly storageType: string;
 
-  constructor(private readonly platformFactory: PlatformFactory) {
-    // Crear carpeta de almacenamiento si no existe
-    if (!existsSync(this.storagePath)) {
+  constructor(
+    private readonly platformFactory: PlatformFactory,
+    private readonly supabaseService: SupabaseService,
+    private readonly configService: ConfigService,
+  ) {
+    this.storagePath =
+      this.configService.get<string>('storage.path') || './storage/screenshots';
+    this.storageType =
+      this.configService.get<string>('storage.type') || 'local';
+
+    // Crear carpeta de almacenamiento local si no existe y se usa storage local
+    if (this.storageType === 'local' && !existsSync(this.storagePath)) {
       mkdirSync(this.storagePath, { recursive: true });
+    }
+
+    this.logger.log(`📁 Storage type: ${this.storageType}`);
+    if (this.storageType === 'supabase') {
+      this.logger.log(
+        `☁️  Supabase Storage configurado: ${this.supabaseService.isConfigured() ? '✅' : '❌'}`,
+      );
     }
   }
 
@@ -199,13 +219,35 @@ export class ScreenshotsService {
         const timestamp = Date.now();
         const filename = `${symbol}_${timeframe}_${timestamp}.${options.format || 'png'}`;
 
-        // Guardar archivo solo si saveToStorage es true
+        // Guardar archivo según el tipo de storage configurado
         let imageUrl: string | null = null;
-        if (options.saveToStorage) {
-          const filepath = join(this.storagePath, filename);
-          writeFileSync(filepath, screenshot);
-          imageUrl = `/screenshots/${filename}`;
-          this.logger.debug(`Screenshot guardado en: ${filepath}`);
+        if (options.saveToStorage !== false) {
+          // Por defecto saveToStorage es true
+          if (this.storageType === 'supabase') {
+            // Subir a Supabase Storage
+            const uploadResult = await this.supabaseService.uploadFile(
+              filename,
+              screenshot,
+              `image/${options.format || 'png'}`,
+            );
+            if (uploadResult) {
+              imageUrl = uploadResult.url;
+              this.logger.debug(`Screenshot subido a Supabase: ${imageUrl}`);
+            } else {
+              this.logger.warn(
+                `Fallo al subir a Supabase, usando almacenamiento local como fallback`,
+              );
+              const filepath = join(this.storagePath, filename);
+              writeFileSync(filepath, screenshot);
+              imageUrl = `/screenshots/${filename}`;
+            }
+          } else {
+            // Storage local por defecto
+            const filepath = join(this.storagePath, filename);
+            writeFileSync(filepath, screenshot);
+            imageUrl = `/screenshots/${filename}`;
+            this.logger.debug(`Screenshot guardado localmente: ${filepath}`);
+          }
         } else {
           this.logger.debug(`Screenshot NO guardado (saveToStorage=false)`);
         }
