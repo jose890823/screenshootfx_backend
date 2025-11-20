@@ -11,6 +11,7 @@ describe('ScreenshotsController', () => {
 
   const mockScreenshotsService = {
     batchCapture: jest.fn(),
+    batchCaptureObject: jest.fn(),
     singleCapture: jest.fn(),
   };
 
@@ -273,6 +274,312 @@ describe('ScreenshotsController', () => {
       const result = await controller.batchCapture(dto);
 
       expect(result.data.screenshots[0].metadata.dimensions).toBe('2560x1440');
+    });
+  });
+
+  describe('POST /screenshots/batch-object', () => {
+    it('debe estar definido', () => {
+      expect(controller).toBeDefined();
+      expect(controller.batchCaptureObject).toBeDefined();
+    });
+
+    it('debe retornar screenshots en formato objeto con claves SIMBOLO_TIMEFRAME', async () => {
+      const dto: BatchScreenshotDto = {
+        symbols: ['XAUUSD'],
+        timeframes: ['240', '60', '5'],
+        platform: 'tradingview',
+        includeBase64: false,
+      };
+
+      const expectedResult = {
+        success: true,
+        data: {
+          totalImages: 3,
+          platform: 'tradingview',
+          screenshots: {
+            XAUUSD_H4: {
+              symbol: 'XAUUSD',
+              timeframe: '4H',
+              platform: 'tradingview',
+              imageUrl: '/screenshots/XAUUSD_240_1234567890.png',
+              metadata: {
+                capturedAt: '2025-11-19T00:00:00Z',
+                fileSize: '245KB',
+                dimensions: '2560x1440',
+              },
+            },
+            XAUUSD_H1: {
+              symbol: 'XAUUSD',
+              timeframe: '1H',
+              platform: 'tradingview',
+              imageUrl: '/screenshots/XAUUSD_60_1234567891.png',
+              metadata: {
+                capturedAt: '2025-11-19T00:00:00Z',
+                fileSize: '243KB',
+                dimensions: '2560x1440',
+              },
+            },
+            XAUUSD_M5: {
+              symbol: 'XAUUSD',
+              timeframe: '5M',
+              platform: 'tradingview',
+              imageUrl: '/screenshots/XAUUSD_5_1234567892.png',
+              metadata: {
+                capturedAt: '2025-11-19T00:00:00Z',
+                fileSize: '240KB',
+                dimensions: '2560x1440',
+              },
+            },
+          },
+          summary: {
+            successful: 3,
+            failed: 0,
+            totalTime: '12.5s',
+          },
+        },
+      };
+
+      mockScreenshotsService.batchCaptureObject.mockResolvedValue(expectedResult);
+
+      const result = await controller.batchCaptureObject(dto);
+
+      expect(result).toEqual(expectedResult);
+      expect(result.data.screenshots).toHaveProperty('XAUUSD_H4');
+      expect(result.data.screenshots).toHaveProperty('XAUUSD_H1');
+      expect(result.data.screenshots).toHaveProperty('XAUUSD_M5');
+      expect(mockScreenshotsService.batchCaptureObject).toHaveBeenCalledWith(dto);
+      expect(mockScreenshotsService.batchCaptureObject).toHaveBeenCalledTimes(1);
+    });
+
+    it('debe funcionar con múltiples símbolos', async () => {
+      const dto: BatchScreenshotDto = {
+        symbols: ['XAUUSD', 'EURUSD'],
+        timeframes: ['240', '60'],
+        platform: 'tradingview',
+        includeBase64: false,
+      };
+
+      const expectedResult = {
+        success: true,
+        data: {
+          totalImages: 4,
+          platform: 'tradingview',
+          screenshots: {
+            XAUUSD_H4: {
+              symbol: 'XAUUSD',
+              timeframe: '4H',
+              platform: 'tradingview',
+              imageUrl: '/screenshots/XAUUSD_240_1234567890.png',
+              metadata: { capturedAt: '2025-11-19T00:00:00Z', fileSize: '245KB', dimensions: '2560x1440' },
+            },
+            XAUUSD_H1: {
+              symbol: 'XAUUSD',
+              timeframe: '1H',
+              platform: 'tradingview',
+              imageUrl: '/screenshots/XAUUSD_60_1234567891.png',
+              metadata: { capturedAt: '2025-11-19T00:00:00Z', fileSize: '243KB', dimensions: '2560x1440' },
+            },
+            EURUSD_H4: {
+              symbol: 'EURUSD',
+              timeframe: '4H',
+              platform: 'tradingview',
+              imageUrl: '/screenshots/EURUSD_240_1234567892.png',
+              metadata: { capturedAt: '2025-11-19T00:00:00Z', fileSize: '240KB', dimensions: '2560x1440' },
+            },
+            EURUSD_H1: {
+              symbol: 'EURUSD',
+              timeframe: '1H',
+              platform: 'tradingview',
+              imageUrl: '/screenshots/EURUSD_60_1234567893.png',
+              metadata: { capturedAt: '2025-11-19T00:00:00Z', fileSize: '238KB', dimensions: '2560x1440' },
+            },
+          },
+          summary: {
+            successful: 4,
+            failed: 0,
+            totalTime: '15.0s',
+          },
+        },
+      };
+
+      mockScreenshotsService.batchCaptureObject.mockResolvedValue(expectedResult);
+
+      const result = await controller.batchCaptureObject(dto);
+
+      expect(result.data.totalImages).toBe(4);
+      expect(Object.keys(result.data.screenshots).length).toBe(4);
+      expect(result.data.screenshots).toHaveProperty('XAUUSD_H4');
+      expect(result.data.screenshots).toHaveProperty('EURUSD_H1');
+    });
+
+    it('debe funcionar con Investing.com', async () => {
+      const dto: BatchScreenshotDto = {
+        symbols: ['XAUUSD'],
+        timeframes: ['240'],
+        platform: 'investing',
+        includeBase64: false,
+      };
+
+      const expectedResult = {
+        success: true,
+        data: {
+          totalImages: 1,
+          platform: 'investing',
+          screenshots: {
+            XAUUSD_H4: {
+              symbol: 'XAUUSD',
+              timeframe: '4H',
+              platform: 'investing',
+              imageUrl: '/screenshots/XAUUSD_240_1234567890.png',
+              metadata: {
+                capturedAt: '2025-11-19T00:00:00Z',
+                fileSize: '240KB',
+                dimensions: '2560x1440',
+              },
+            },
+          },
+          summary: {
+            successful: 1,
+            failed: 0,
+            totalTime: '5.2s',
+          },
+        },
+      };
+
+      mockScreenshotsService.batchCaptureObject.mockResolvedValue(expectedResult);
+
+      const result = await controller.batchCaptureObject(dto);
+
+      expect(result.data.platform).toBe('investing');
+      expect(result.data.screenshots.XAUUSD_H4.platform).toBe('investing');
+    });
+
+    it('debe generar claves correctas para diferentes timeframes', async () => {
+      const dto: BatchScreenshotDto = {
+        symbols: ['XAUUSD'],
+        timeframes: ['1', '5', '15', '60', '240', '1D'],
+        platform: 'tradingview',
+        includeBase64: false,
+      };
+
+      const expectedResult = {
+        success: true,
+        data: {
+          totalImages: 6,
+          platform: 'tradingview',
+          screenshots: {
+            XAUUSD_M1: { symbol: 'XAUUSD', timeframe: '1M', platform: 'tradingview' },
+            XAUUSD_M5: { symbol: 'XAUUSD', timeframe: '5M', platform: 'tradingview' },
+            XAUUSD_M15: { symbol: 'XAUUSD', timeframe: '15M', platform: 'tradingview' },
+            XAUUSD_H1: { symbol: 'XAUUSD', timeframe: '1H', platform: 'tradingview' },
+            XAUUSD_H4: { symbol: 'XAUUSD', timeframe: '4H', platform: 'tradingview' },
+            XAUUSD_D1: { symbol: 'XAUUSD', timeframe: '1D', platform: 'tradingview' },
+          },
+          summary: {
+            successful: 6,
+            failed: 0,
+            totalTime: '20.0s',
+          },
+        },
+      };
+
+      mockScreenshotsService.batchCaptureObject.mockResolvedValue(expectedResult);
+
+      const result = await controller.batchCaptureObject(dto);
+
+      expect(result.data.screenshots).toHaveProperty('XAUUSD_M1');
+      expect(result.data.screenshots).toHaveProperty('XAUUSD_M5');
+      expect(result.data.screenshots).toHaveProperty('XAUUSD_M15');
+      expect(result.data.screenshots).toHaveProperty('XAUUSD_H1');
+      expect(result.data.screenshots).toHaveProperty('XAUUSD_H4');
+      expect(result.data.screenshots).toHaveProperty('XAUUSD_D1');
+    });
+
+    it('debe incluir base64 cuando se solicita', async () => {
+      const dto: BatchScreenshotDto = {
+        symbols: ['XAUUSD'],
+        timeframes: ['240'],
+        platform: 'tradingview',
+        includeBase64: true,
+      };
+
+      const expectedResult = {
+        success: true,
+        data: {
+          totalImages: 1,
+          platform: 'tradingview',
+          screenshots: {
+            XAUUSD_H4: {
+              symbol: 'XAUUSD',
+              timeframe: '4H',
+              platform: 'tradingview',
+              imageUrl: '/screenshots/XAUUSD_240_1234567890.png',
+              base64: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg...',
+              metadata: {
+                capturedAt: '2025-11-19T00:00:00Z',
+                fileSize: '245KB',
+                dimensions: '2560x1440',
+              },
+            },
+          },
+          summary: {
+            successful: 1,
+            failed: 0,
+            totalTime: '4.5s',
+          },
+        },
+      };
+
+      mockScreenshotsService.batchCaptureObject.mockResolvedValue(expectedResult);
+
+      const result = await controller.batchCaptureObject(dto);
+
+      expect(result.data.screenshots.XAUUSD_H4.base64).toBeDefined();
+      expect(result.data.screenshots.XAUUSD_H4.base64).toContain('data:image/png;base64,');
+    });
+
+    it('debe manejar errores correctamente', async () => {
+      const dto: BatchScreenshotDto = {
+        symbols: ['XAUUSD'],
+        timeframes: ['240'],
+        platform: 'tradingview',
+      };
+
+      const error = new Error('Screenshot capture failed');
+      mockScreenshotsService.batchCaptureObject.mockRejectedValue(error);
+
+      await expect(controller.batchCaptureObject(dto)).rejects.toThrow(
+        'Screenshot capture failed',
+      );
+    });
+
+    it('debe retornar objeto vacío si todos los screenshots fallan', async () => {
+      const dto: BatchScreenshotDto = {
+        symbols: ['XAUUSD'],
+        timeframes: ['240'],
+        platform: 'tradingview',
+      };
+
+      const expectedResult = {
+        success: true,
+        data: {
+          totalImages: 1,
+          platform: 'tradingview',
+          screenshots: {}, // Objeto vacío porque todos fallaron
+          summary: {
+            successful: 0,
+            failed: 1,
+            totalTime: '5.0s',
+          },
+        },
+      };
+
+      mockScreenshotsService.batchCaptureObject.mockResolvedValue(expectedResult);
+
+      const result = await controller.batchCaptureObject(dto);
+
+      expect(Object.keys(result.data.screenshots).length).toBe(0);
+      expect(result.data.summary.failed).toBe(1);
     });
   });
 

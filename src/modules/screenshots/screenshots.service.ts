@@ -108,6 +108,91 @@ export class ScreenshotsService {
   }
 
   /**
+   * Captura múltiple de screenshots con formato de objeto (endpoint /batch-object)
+   * Retorna un objeto donde las claves son SIMBOLO_TIMEFRAME (ej: XAUUSD_H4, EURUSD_M5)
+   */
+  async batchCaptureObject(dto: BatchScreenshotDto) {
+    const startTime = Date.now();
+    this.logger.log(
+      `Iniciando batch capture (formato objeto): ${dto.symbols.length} símbolos × ${dto.timeframes.length} timeframes = ${dto.symbols.length * dto.timeframes.length} screenshots`,
+    );
+
+    const screenshots: Record<string, any> = {}; // Objeto en lugar de array
+    const maxConcurrent = parseInt(process.env.MAX_CONCURRENT_SCREENSHOTS || '3');
+
+    // Generar todas las combinaciones símbolo/timeframe
+    const tasks: Array<{ symbol: string; timeframe: string }> = [];
+    for (const symbol of dto.symbols) {
+      for (const timeframe of dto.timeframes) {
+        tasks.push({ symbol, timeframe });
+      }
+    }
+
+    // Procesar en lotes con control de concurrencia
+    let successful = 0;
+    let failed = 0;
+
+    for (let i = 0; i < tasks.length; i += maxConcurrent) {
+      const batch = tasks.slice(i, i + maxConcurrent);
+      const batchPromises = batch.map(({ symbol, timeframe }) =>
+        this.captureScreenshot(symbol, timeframe, dto.platform, dto)
+          .then((result) => {
+            successful++;
+            // Generar clave del objeto: XAUUSD_H4, EURUSD_M5, etc.
+            const key = this.generateScreenshotKey(symbol, timeframe);
+            screenshots[key] = result;
+            return result;
+          })
+          .catch((error) => {
+            failed++;
+            this.logger.error(
+              `Error capturando ${symbol} ${timeframe}: ${error.message}`,
+            );
+            // Agregar al objeto con clave generada pero marcado como error
+            const key = this.generateScreenshotKey(symbol, timeframe);
+            screenshots[key] = {
+              symbol,
+              timeframe,
+              error: error.message,
+              success: false,
+            };
+            return null;
+          }),
+      );
+
+      await Promise.all(batchPromises);
+    }
+
+    const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
+
+    this.logger.log(
+      `Batch capture (objeto) completado: ${successful} exitosos, ${failed} fallidos en ${totalTime}s`,
+    );
+
+    // Filtrar screenshots fallidos del objeto
+    const successfulScreenshots: Record<string, any> = {};
+    Object.keys(screenshots).forEach((key) => {
+      if (screenshots[key].success !== false) {
+        successfulScreenshots[key] = screenshots[key];
+      }
+    });
+
+    return {
+      success: true,
+      data: {
+        totalImages: tasks.length,
+        platform: dto.platform || 'tradingview',
+        screenshots: successfulScreenshots, // Objeto en lugar de array
+        summary: {
+          successful,
+          failed,
+          totalTime: `${totalTime}s`,
+        },
+      },
+    };
+  }
+
+  /**
    * Captura individual de screenshot (endpoint /single)
    */
   async singleCapture(dto: SingleScreenshotDto) {
@@ -275,7 +360,7 @@ export class ScreenshotsService {
   }
 
   /**
-   * Formatea timeframe a formato legible
+   * Formatea timeframe a formato legible (M1, M5, H1, H4, D1, etc.)
    */
   private formatTimeframe(timeframe: string): string {
     const map: Record<string, string> = {
@@ -284,12 +369,37 @@ export class ScreenshotsService {
       '15': '15M',
       '30': '30M',
       '60': '1H',
+      '120': '2H',
       '240': '4H',
+      '360': '6H',
+      '480': '8H',
+      '720': '12H',
       '1D': '1D',
       D: '1D',
+      '1W': '1W',
+      W: '1W',
     };
 
     return map[timeframe] || timeframe;
+  }
+
+  /**
+   * Genera clave para objeto de screenshots: SIMBOLO_TIMEFRAME_FORMATEADO
+   * Ejemplo: XAUUSD_H4, EURUSD_M5, GBPUSD_D1
+   */
+  private generateScreenshotKey(symbol: string, timeframe: string): string {
+    const formattedTimeframe = this.formatTimeframe(timeframe);
+    // Convertir 1M → M1, 5M → M5, 1H → H1, 4H → H4, 1D → D1, etc.
+    let key = formattedTimeframe;
+
+    // Si el formato es Número+Letra, invertir a Letra+Número
+    const match = formattedTimeframe.match(/^(\d+)([MHDW])$/);
+    if (match) {
+      const [, number, letter] = match;
+      key = `${letter}${number}`;
+    }
+
+    return `${symbol}_${key}`;
   }
 
   /**
