@@ -180,6 +180,11 @@ export class ScreenshotsService {
     return {
       success: true,
       data: {
+        symbol: dto.symbols[0] || null, // Primer símbolo (compatibilidad caso único)
+        symbols: dto.symbols, // Array completo de símbolos
+        symbol1: dto.symbols[0] || null, // Símbolo 1 (acceso directo en Make.com)
+        symbol2: dto.symbols[1] || null, // Símbolo 2 (acceso directo en Make.com)
+        symbol3: dto.symbols[2] || null, // Símbolo 3 (acceso directo en Make.com)
         totalImages: tasks.length,
         platform: dto.platform || 'tradingview',
         screenshots: successfulScreenshots, // Objeto en lugar de array

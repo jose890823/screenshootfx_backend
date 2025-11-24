@@ -98,6 +98,11 @@ export class ScreenshotsController {
       example: {
         success: true,
         data: {
+          symbol: 'XAUUSD',
+          symbols: ['XAUUSD'],
+          symbol1: 'XAUUSD',
+          symbol2: null,
+          symbol3: null,
           totalImages: 3,
           platform: 'tradingview',
           screenshots: {
